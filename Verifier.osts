@@ -1,0 +1,110 @@
+//BEFORE RUNNING THIS SCRIPT, YOU MUST SET THE CELL VALUE OF THE "debit" HEADER CELL ON LINE 32
+//[It may be more efficient to copy-paste the contents of this file into the Excel script editor than copying the file itself]
+
+function main(workbook: ExcelScript.Workbook) {
+  //--------------
+  //This script dynamically detects and runs through each entry of an accounting journal, and determines whether the entry is balanced or not.
+  //It will mark unbalanced entries by highlighting a nearby cell red.
+  //After finishing, it will state the debit/credit totals and the number of unbalanced entries detected. 
+  //--------------
+  // The algorithm starts by searching the top of the Sheet for a cell that reads "Debit."
+  // Specific formatting is requried for this to function.
+  // I.E. Debits listed first per entry, two spaces between entry values, etc.
+  // It will go down one cell, to the first debit of the first entry, then
+  // Iterate through the debits (of which must be listed directly under each other) and add their values.
+  // Once it hits a blank cell, the debits are done for the entry and it moves to the adjacent cell.
+  // It will then iterate and add the credits until it reaches another blank cell.
+  // To check if the entry is truly finished, it will check the left adjacent to cell for a blank entry.
+  // This signifies the end of the entry. Added credits will then be compared to added debits.
+  // If the debits and credits are equal, the entry is clear.
+  // The algorithm will then iterate down to the debit of the next entry and start the process again.
+  // If there is an inequality between added debits and credits for an entry,
+  // The offending cells are highlighted in red.
+  // When the program is only able to find blank cells, all entries have been checked.
+  // The program will then quit.
+  //--------------
+
+
+
+  //Get the current worksheet
+  var sheet = workbook.getActiveWorksheet();
+
+  //Set the debit header cell
+  var debitCell = sheet.getRange("E2");
+
+  //Active cell being analyzed
+  var cell = debitCell;
+
+  //Vars for column totals
+  var debitSum = 0;
+  var creditSum = 0;
+
+  //Vars for entry-specific totals
+  let debits = 0;
+  let credits = 0;
+
+  //Var to detect if algorithm is finished
+  var finished = false;
+
+  //Var to store number of entry errors
+  var errors = 0;
+
+  //Var that starts algorithm in the debit column
+  var onCredit = false;
+
+
+
+  //----ALGORITHM START----------
+
+
+
+  while (!finished) {
+    //Increment down
+    var cell = cell.getOffsetRange(1, 0);
+
+    //If the cell is blank, switch to the right
+    if (!cell.getValue()) {
+      //If already on the credit column, exit entry
+      if (onCredit) {
+        //Check if entry is balanced, highlights red if not
+        if (debits == credits) {
+          console.log("Entry balanced.");
+        } else {
+          console.log("Entry at row [" + (cell.getRowIndex() + 1) + ", " + (cell.getColumnIndex() + 1) + "] is unbalanced!");
+          cell.getFormat().getFill().setColor("Red");
+          errors = errors + 1;
+        }
+
+        //Check if there's another entry
+        if (!cell.getOffsetRange(2, -1).getValue()) { //If it's blank...
+          debitSum = debitSum += debits; //Add entry debits to column debits
+          creditSum = creditSum += credits; //Add entry credits to column credits
+          errors >= 1
+            ? (console.log("Detected discrepancies: " + errors ))
+            : (console.log("Algorithm deems the entires to balanced."));
+          console.log("Final debits: " + debitSum);
+          console.log("Final credits: " + creditSum);
+          finished = true; //There are no more entries, thus the algorithm can end
+        } else { //If there's another entry...
+          debitSum = debitSum += debits; //Add entry debits to column debits
+          creditSum = creditSum += credits; //Add entry credits to column credits
+          debits = 0; //Reset entry-specific debits
+          credits = 0; //Reset entry-specific credits
+          cell = cell.getOffsetRange(1, -1); //move above the next entry in the debit column
+          onCredit = false;
+        }
+      } else {
+        //Debits are finished, switch to above first credit entry
+        onCredit = true;
+        cell = cell.getOffsetRange(-1, 1);
+      }
+
+      //If it has a value, add it to the debits/credits
+    } else {
+      //Add to credits or debits depending on if program switched to credit column or not
+      onCredit ? (credits += Number(cell.getValue())) : (debits += Number(cell.getValue()));
+    }
+  }
+}
+
+//----------END ALGORITHM------------
