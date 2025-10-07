@@ -1,0 +1,4 @@
+# Example program names, one per line. For instance:
+Discord
+ollama
+# ...
